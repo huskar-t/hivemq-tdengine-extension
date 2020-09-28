@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<tdengine>
+    <!--    http or sdk    -->
+    <type>http</type>
+    <!--    use hostname when using sdk   -->
+    <ip>127.0.0.1</ip>
+    <!--    http 6041  sdk 6030   -->
+    <port>6041</port>
+    <!--    default root   -->
+    <username>root</username>
+    <!--    default taosdata   -->
+    <password>taosdata</password>
+    <!--    max 'NCHAR' type length   -->
+    <maxlength>64</maxlength>
+</tdengine>
