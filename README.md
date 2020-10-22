@@ -5,15 +5,17 @@
 写入支持 HTTP 和 SDK 两种方式
 
 ## 执行过程
-> * 读取配置文件
-> * 创建 TDengine 连接
-> * 创建库 hivemq
-> * 创建表 hivemq.mqtt_payload
-> * 拦截所有 publish 消息
-> * 将 topic 和 payload 异步写入表中
->  * 如果 payload 包含特殊字符尝试使用 base64 编码 payload
->  * 出现异常将抛弃该消息并打印异常
-> * 插件卸载时调用关闭数据库连接
+> + 读取配置文件
+> + 创建 TDengine 连接
+> + 创建库 (库名在配置文件 db 配置项)
+> + 创建表 (表名在配置文件 table 配置项)
+> + 拦截所有 publish 消息
+> + 将 topic 和 payload 异步写入表中 
+>   - topic 列名在配置文件 topicColumn 配置项
+>   - payload 列名在配置文件 PayloadColumn 配置项
+>   - 如果 payload 包含特殊字符(GBK 无法编码)尝试使用 base64 编码 payload
+>   - 出现异常将抛弃该消息并打印异常
+> + 插件卸载时调用关闭数据库连接
 
 ## 架构
 > * TDengine.java 负责处理数据库连接 创建库表 写入数据
@@ -43,7 +45,7 @@ mvn package
 ### 插件部署
 > 1. 将打包好的压缩包如: hivemq-tdengine-extension-{version}-distribution.zip 解压到 HiveMQ 目录的 extensions 文件夹下  
 > 2. 修改插件包内的 tdengine.xml 配置文件为实际使用的数据库信息  
-> 3. 不需要手动建库建表,插件启动时会自动创建库 hivemq 表 hivemq.mqtt_payload
+> 3. 不需要手动建库建表,插件启动时会自动创建库和表
 
 ### 注意事项
 > 1. 在使用 sdk 进行保存 payload 时如果并发数过会引发 “Invalid result set pointer”,根据issue #1477 [https://github.com/taosdata/TDengine/issues/1477](https://github.com/taosdata/TDengine/issues/1477) 修改后错误依旧，所以使用 ReentrantLock 加锁避免竞争。

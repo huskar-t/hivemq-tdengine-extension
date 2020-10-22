@@ -11,6 +11,16 @@
     <username>root</username>
     <!--    default taosdata   -->
     <password>taosdata</password>
+    <!--    database name default hivemq-->
+    <db>hivemq</db>
+    <!--    table name default mqtt_payload-->
+    <table>mqtt_payload</table>
+    <!--    topic column name default topic-->
+    <topicColumn>topic</topicColumn>
+    <!--    payload column name default payload-->
+    <PayloadColumn>payload</PayloadColumn>
     <!--    max 'NCHAR' type length   -->
     <maxlength>64</maxlength>
+    <!--    whether to use sync lock when using http-->
+    <httpLock>false</httpLock>
 </tdengine>

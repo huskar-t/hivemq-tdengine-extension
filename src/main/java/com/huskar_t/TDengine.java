@@ -61,8 +61,14 @@ public class TDengine {
     private String token;
     private String url;
     private Statement stmt = null;
-    private CloseableHttpClient client;
-    private final Lock lock=new ReentrantLock();
+    private String db;
+    private String table;
+    private String topicColumn;
+    private String PayloadColumn;
+    private String insertTemplate;
+    private final CloseableHttpClient client;
+    private boolean httpLock;
+    private final Lock lock = new ReentrantLock();
 
     /**
      * @param configPath 配置文件路径
@@ -78,7 +84,13 @@ public class TDengine {
         this.setPort(root.elementTextTrim("port"));
         this.setUsername(root.elementTextTrim("username"));
         this.setPassword(root.elementTextTrim("password"));
+        this.setDb(root.elementTextTrim("db"));
+        this.setTable(root.elementTextTrim("table"));
+        this.setTopicColumn(root.elementTextTrim("topicColumn"));
+        this.setPayloadColumn(root.elementTextTrim("PayloadColumn"));
         this.setMaxlength(Integer.valueOf(root.elementTextTrim("maxlength")));
+        this.setInsertTemplate(String.format("import into %s.%s values (now,'%%s','%%s')", this.getDb(), this.getTable()));
+        this.setHttpLock(Boolean.parseBoolean(root.elementTextTrim("httpLock")));
         this.client = HttpClients.createDefault();
     }
 
@@ -133,14 +145,23 @@ public class TDengine {
             }
             // create database
             try {
-                this.stmt.executeUpdate("create database if not exists hivemq");
+                this.stmt.executeUpdate(String.format("create database if not exists %s", this.getDb()));
             } catch (SQLException e) {
                 log.error("tdengine create database error", e);
                 return false;
             }
             // create table
             try {
-                this.stmt.executeUpdate(String.format("create table if not exists hivemq.mqtt_payload (ts timestamp, topic NCHAR(%d), payload NCHAR(%d))", getMaxlength(), getMaxlength()));
+                this.stmt.executeUpdate(
+                        String.format(
+                                "create table if not exists %s.%s (ts timestamp, %s NCHAR(%d), %s NCHAR(%d))",
+                                this.getDb(),
+                                this.getTable(),
+                                this.getTopicColumn(),
+                                this.getMaxlength(),
+                                this.getPayloadColumn(),
+                                this.getMaxlength())
+                );
             } catch (SQLException e) {
                 log.error("tdengine create table error", e);
                 return false;
@@ -150,12 +171,21 @@ public class TDengine {
     }
 
     private boolean httpCreateDBAndTable() {
-        JSONObject createDBResult = doPost("create database if not exists hivemq");
+        JSONObject createDBResult = doPost(String.format("create database if not exists %s", this.getDb()));
         if (createDBResult == null) {
             log.error("http create db error");
             return false;
         }
-        JSONObject createTableResult = doPost(String.format("create table if not exists hivemq.mqtt_payload (ts timestamp, topic NCHAR(%d), payload NCHAR(%d))", getMaxlength(), getMaxlength()));
+        JSONObject createTableResult = doPost(
+                String.format(
+                        "create table if not exists %s.%s (ts timestamp, %s NCHAR(%d), %s NCHAR(%d))",
+                        this.getDb(),
+                        this.getTable(),
+                        this.getTopicColumn(),
+                        this.getMaxlength(),
+                        this.getPayloadColumn(),
+                        this.getMaxlength())
+        );
         if (createTableResult == null) {
             log.error("http create table error");
             return false;
@@ -235,44 +265,58 @@ public class TDengine {
      * @return boolen
      */
     public boolean saveData(String topic, String payload) {
-        final String sql = String.format("import into hivemq.mqtt_payload values (now,'%s','%s')", topic, payload);
+        final String sql = String.format(
+                this.getInsertTemplate(),
+                topic,
+                payload
+        );
+
         switch (this.getType()) {
             case "http":
-                JSONObject result = this.doPost(sql);
-                if (result == null) {
-                    log.info("saveData to TDengine error, try to use base64");
-                    final String retrySql = String.format(
-                            "import into hivemq.mqtt_payload values (now,'%s','%s')",
-                            topic,
-                            Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8))
-                    );
-                    JSONObject retryResult = this.doPost(retrySql);
-                    if (retryResult == null) {
-                        return false;
-                    }
-                    String status = retryResult.getString("status");
-                    return status.equals("succ");
+                if (this.isHttpLock()) {
+                    lock.lock();
                 }
-                String status = result.getString("status");
-                return status.equals("succ");
+                try {
+                    JSONObject result = this.doPost(sql);
+                    if (result == null) {
+                        log.info("saveData to TDengine error, try to use base64");
+                        final String retrySql = String.format(
+                                this.getInsertTemplate(),
+                                topic,
+                                Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8))
+                        );
+                        JSONObject retryResult = this.doPost(retrySql);
+                        if (retryResult == null) {
+                            return false;
+                        }
+                        String status = retryResult.getString("status");
+                        return status.equals("succ");
+                    }
+                    String status = result.getString("status");
+                    return status.equals("succ");
+                } finally {
+                    if (this.isHttpLock()) {
+                        lock.lock();
+                    }
+                }
             case "sdk":
                 lock.lock();
                 try {
                     if (this.stmt != null) {
 
                         this.stmt.executeUpdate(sql);
-                    }else{
+                    } else {
                         try {
                             this.stmt = this.conn.createStatement();
-                        }catch (SQLException e){
-                            log.error("recreate statement error",e);
+                        } catch (SQLException e) {
+                            log.error("recreate statement error", e);
                         }
                     }
                 } catch (SQLException e) {
                     if (e.getMessage().startsWith("TDengine Error: syntax error")) {
 //                        maybe the codec error,try to use base64
                         final String retrySql = String.format(
-                                "import into hivemq.mqtt_payload values (now,'%s','%s')",
+                                this.getInsertTemplate(),
                                 topic,
                                 Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8))
                         );
@@ -286,7 +330,7 @@ public class TDengine {
                         log.error("retry save data error", e);
                         return false;
                     }
-                }finally {
+                } finally {
                     lock.unlock();
                 }
                 return true;
@@ -367,5 +411,65 @@ public class TDengine {
             maxlength = 64;
         }
         this.maxlength = maxlength;
+    }
+
+    public String getDb() {
+        return db;
+    }
+
+    public void setDb(String db) {
+        if (db.equals("")) {
+            db = "hivemq";
+        }
+        this.db = db;
+    }
+
+    public String getTable() {
+        return table;
+    }
+
+    public void setTable(String table) {
+        if (table.equals("")) {
+            table = "mqtt_payload";
+        }
+        this.table = table;
+    }
+
+    public String getTopicColumn() {
+        return topicColumn;
+    }
+
+    public void setTopicColumn(String topicColumn) {
+        if (topicColumn.equals("")) {
+            this.topicColumn = "topic";
+        }
+        this.topicColumn = topicColumn;
+    }
+
+    public String getPayloadColumn() {
+        return PayloadColumn;
+    }
+
+    public void setPayloadColumn(String payloadColumn) {
+        if (payloadColumn.equals("")) {
+            payloadColumn = "payload";
+        }
+        PayloadColumn = payloadColumn;
+    }
+
+    public String getInsertTemplate() {
+        return insertTemplate;
+    }
+
+    public void setInsertTemplate(String insertTemplate) {
+        this.insertTemplate = insertTemplate;
+    }
+
+    public boolean isHttpLock() {
+        return httpLock;
+    }
+
+    public void setHttpLock(boolean httpLock) {
+        this.httpLock = httpLock;
     }
 }
