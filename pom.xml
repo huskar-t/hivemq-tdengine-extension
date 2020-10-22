@@ -21,7 +21,7 @@
 
     <groupId>com.huskar_t</groupId>
     <artifactId>hivemq-tdengine-extension</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.3</version>
 
     <description>HiveMQ 4 TDengine Extension</description>
 

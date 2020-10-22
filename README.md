@@ -18,15 +18,15 @@
 > + 插件卸载时调用关闭数据库连接
 
 ## 架构
-> * TDengine.java 负责处理数据库连接 创建库表 写入数据
-> * TDengineExtension.java 为插件主入口 
->  * extensionStart 方法在插件启动时调用
+> + TDengine.java 负责处理数据库连接 创建库表 写入数据
+> + TDengineExtension.java 为插件主入口 
+>  - extensionStart 方法在插件启动时调用
 >    * 传入 tdengine.xml (tdengine配置文件)文件位置给 TDengine 进行创建数据库连接和初始化库表
 >    * 注册 TDengineInterceptor
->  * extensionStop 方法在插件结束生命周期时调用
+>  - extensionStop 方法在插件结束生命周期时调用
 >    * 调用 tdengine.close 方法断开 SDK 连接
-> * TDengineInterceptor.java 拦截器实现
->  * onInboundPublish 方法在消息 publish 时触发
+> + TDengineInterceptor.java 拦截器实现
+>  - onInboundPublish 方法在消息 publish 时触发
 >    * 异步调用 tdengine.saveData 方法写入 TDengine 数据库
 
 ## 编译步骤
