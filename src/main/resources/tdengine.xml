@@ -16,7 +16,7 @@
     <!--    table name default mqtt_payload-->
     <table>mqtt_payload</table>
     <!--    topic column name default topic-->
-    <topicColumn>topic</topicColumn>
+    <topicColumn>mqtt_topic</topicColumn>
     <!--    payload column name default payload-->
     <PayloadColumn>payload</PayloadColumn>
     <!--    max 'NCHAR' type length   -->
