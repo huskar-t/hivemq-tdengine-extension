@@ -40,7 +40,7 @@ mvn package
 See official documentation: [https://www.taosdata.com/cn/getting-started/](https://www.taosdata.com/cn/getting-started/)
 
 ### HiveMQ
-See official documentation: [https://www.hivemq.com/docs/hivemq/4.4/user-guide/install-hivemq.html](https://www.hivemq.com/docs/hivemq/4.4/user-guide/install-hivemq.html)
+See official documentation: [https://www.hivemq.com/docs/hivemq/4.8/user-guide/install-hivemq.html](https://www.hivemq.com/docs/hivemq/4.8/user-guide/install-hivemq.html)
 
 ### Extension deployment
 > 1. Unzip the packaged compressed package such as: hivemq-tdengine-extension-{version}-distribution.zip to the extensions folder of the HiveMQ directory
@@ -56,7 +56,7 @@ TDengine FAQ: [https://www.taosdata.com/cn/documentation/faq/](https://www.taosd
 ### Performance test results
 #### Environment
 > * TDengine : docker Single node  V2.0.3.1
-> * HiveMQ : Single node V4.4.1
+> * HiveMQ : Single node V4.8.0
 > * CPU : Intel 9600k @ 3.70GHz
 > * Memory : 16,224 MB
 > * System : Microsoft Windows 10 Professional 2004

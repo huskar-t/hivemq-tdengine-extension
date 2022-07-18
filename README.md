@@ -40,7 +40,7 @@ mvn package
 见官方文档: [https://www.taosdata.com/cn/getting-started/](https://www.taosdata.com/cn/getting-started/)
 
 ### HiveMQ
-见官方文档: [https://www.hivemq.com/docs/hivemq/4.4/user-guide/install-hivemq.html](https://www.hivemq.com/docs/hivemq/4.4/user-guide/install-hivemq.html)
+见官方文档: [https://www.hivemq.com/docs/hivemq/4.8/user-guide/install-hivemq.html](https://www.hivemq.com/docs/hivemq/4.8/user-guide/install-hivemq.html)
 
 ### 插件部署
 > 1. 将打包好的压缩包如: hivemq-tdengine-extension-{version}-distribution.zip 解压到 HiveMQ 目录的 extensions 文件夹下  
@@ -56,7 +56,7 @@ TDengine 的 FAQ: [https://www.taosdata.com/cn/documentation/faq/](https://www.t
 ### 性能测试结果
 #### 环境
 > * TDengine : docker 单节点  V2.0.3.1
-> * HiveMQ : 裸机 单节点 V4.4.1
+> * HiveMQ : 裸机 单节点 V4.8.0
 > * CPU : Intel 9600k @ 3.70GHz
 > * Memory : 16,224 MB
 > * System : Microsoft Windows 10 专业版 2004
