@@ -37,12 +37,30 @@ import java.io.File;
  */
 public class TDengineExtension implements ExtensionMain {
     private TDengine tdengine;
+    private Iotdb iotdb;
     private static final @NotNull Logger log = LoggerFactory.getLogger(TDengineExtension.class);
 
     @Override
     public void extensionStart(final @NotNull ExtensionStartInput extensionStartInput, final @NotNull ExtensionStartOutput extensionStartOutput) {
         try {
             final File path = extensionStartInput.getExtensionInformation().getExtensionHomeFolder();
+            try {
+                if (StorageBackendSelector.readIotdbEnabled(new File(path, "storage.xml"))) {
+                    iotdb = new Iotdb(new File(path, "iotdb.xml"));
+                    if (!iotdb.connect()) {
+                        throw new IllegalStateException("IoTDB writer could not initialize");
+                    }
+                    addIotdbPublishModifier();
+                    log.info("Started IoTDB publish storage");
+                    return;
+                }
+            } catch (Exception failure) {
+                log.error("Unable to initialize configured storage", failure);
+                closeIotdb();
+                extensionStartOutput.preventExtensionStartup("Storage initialization failed");
+                return;
+            }
+
             tdengine = new TDengine(path.getAbsolutePath() + File.separator + "tdengine.xml");
             boolean success = tdengine.connect();
             if (!success) {
@@ -63,17 +81,33 @@ public class TDengineExtension implements ExtensionMain {
     public void extensionStop(final @NotNull ExtensionStopInput extensionStopInput, final @NotNull ExtensionStopOutput extensionStopOutput) {
         final ExtensionInformation extensionInformation = extensionStopInput.getExtensionInformation();
         log.info("Stopped " + extensionInformation.getName() + ":" + extensionInformation.getVersion());
+        closeIotdb();
         if (this.tdengine != null) {
             this.tdengine.close();
         }
     }
 
+    private void closeIotdb() {
+        if (this.iotdb != null) {
+            try {
+                this.iotdb.close();
+            } catch (Exception e) {
+                log.warn("close IoTDB writer error", e);
+            }
+        }
+    }
+
     private void addPublishModifier() {
         final InitializerRegistry initializerRegistry = Services.initializerRegistry();
-
         final TDengineInterceptor TDengineInterceptor = new TDengineInterceptor(this.tdengine);
-
         initializerRegistry.setClientInitializer((initializerInput, clientContext) -> clientContext.addPublishInboundInterceptor(TDengineInterceptor));
+    }
+
+    private void addIotdbPublishModifier() {
+        final InitializerRegistry initializerRegistry = Services.initializerRegistry();
+        final IotdbInterceptor interceptor = new IotdbInterceptor(this.iotdb);
+        initializerRegistry.setClientInitializer(
+                (initializerInput, clientContext) -> clientContext.addPublishInboundInterceptor(interceptor));
     }
 
 }

@@ -48,6 +48,16 @@
             <filtered>true</filtered>
         </file>
         <file>
+            <source>src/main/resources/storage.xml</source>
+            <outputDirectory>/${artifactId}/</outputDirectory>
+            <filtered>true</filtered>
+        </file>
+        <file>
+            <source>src/main/resources/iotdb.xml</source>
+            <outputDirectory>/${artifactId}/</outputDirectory>
+            <filtered>true</filtered>
+        </file>
+        <file>
             <source>target/${artifactId}-${version}.jar</source>
             <destName>${artifactId}-${version}.jar</destName>
             <outputDirectory>/${artifactId}/</outputDirectory>
