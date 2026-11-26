@@ -29,6 +29,22 @@ Supports HTTP and SDK
 >  - onInboundPublish Method is triggered when the message is published
 >    * Asynchronously call the 'tdengine.saveData' method to write to the TDengine database
 
+## IoTDB backend
+
+The extension also supports the IoTDB Tree model. The existing storage backend remains selected unless `iotdbEnabled` in `storage.xml` is explicitly set to `true`:
+
+```xml
+<storage>
+    <iotdbEnabled>true</iotdbEnabled>
+</storage>
+```
+
+Configure the IoTDB REST API URL, your authentication credentials, database and device paths, measurements, batch size, bounded queue, and HTTP timeout in `iotdb.xml`. The IoTDB REST service must be enabled. On startup, the extension creates the database and two TEXT measurements through REST v2; failed initialization is logged and the sink is closed.
+
+Each MQTT PUBLISH is stored as one record on a single device: `mqtt_topic` contains the topic and `payload_base64` contains the original payload bytes encoded as Base64 text. Decode that value with Base64 to recover the bytes; empty payloads are retained. Writes use the REST v2 `insertRecords` batch API. A process-local monotonic timestamp prevents records in the same precision unit from overwriting one another. `timestampPrecision` must match the IoTDB server's `timestamp_precision` and accepts `ms`, `us`, or `ns`. The default is `ms`; for more than 1,000 records per device per second, configure both sides to `us` or `ns`.
+
+The queue is bounded. When full, enqueueing waits up to `queueOfferTimeoutMillis`, then drops the publish and logs a warning. Failed batches are retried twice. The extension drains the queue on shutdown; records still pending beyond the HTTP timeout budget are logged as dropped. The IoTDB REST service must use valid credentials and grant write permission to the configured Tree paths.
+
 ## Compilation steps
 ```shell script
 mvn clean
@@ -44,8 +60,8 @@ See official documentation: [https://www.hivemq.com/docs/hivemq/4.4/user-guide/i
 
 ### Extension deployment
 > 1. Unzip the packaged compressed package such as: hivemq-tdengine-extension-{version}-distribution.zip to the extensions folder of the HiveMQ directory
-> 2. Modify the tdengine.xml configuration file in the extension package to the actual database information  
-> 3. No need to manually build a database and table, the database and table will be created automatically when the extension starts
+> 2. The existing storage backend remains the default. Enable `iotdbEnabled` in `storage.xml` to choose IoTDB, then edit its XML configuration file.
+> 3. The selected backend's database and table/measurements are initialized automatically at extension startup
 
 ### Precautions
 > 1. When using sdk to save payload, if the number of concurrency is too high, it will cause "Invalid result set pointer",According to issue #1477 [https://github.com/taosdata/TDengine/issues/1477](https://github.com/taosdata/TDengine/issues/1477) The error remains after modification, so use ReentrantLock to lock to avoid competition

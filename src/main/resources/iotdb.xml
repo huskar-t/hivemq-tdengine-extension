@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<iotdb>
+    <!-- IoTDB REST API base URL; REST service must be enabled on the server. -->
+    <url>http://127.0.0.1:18080</url>
+    <username></username>
+    <password></password>
+    <!-- Tree model paths. The device must be below database. -->
+    <database>root.hivemq</database>
+    <device>root.hivemq.mqtt_client</device>
+    <!-- Must match IoTDB's timestamp_precision (ms, us, or ns). -->
+    <timestampPrecision>ms</timestampPrecision>
+    <topicMeasurement>mqtt_topic</topicMeasurement>
+    <payloadMeasurement>payload_base64</payloadMeasurement>
+    <!-- Bounded batching and HTTP request timeouts, in milliseconds. -->
+    <batchSize>100</batchSize>
+    <batchFlushIntervalMillis>10</batchFlushIntervalMillis>
+    <queueCapacity>10000</queueCapacity>
+    <queueOfferTimeoutMillis>100</queueOfferTimeoutMillis>
+    <requestTimeoutMillis>5000</requestTimeoutMillis>
+</iotdb>

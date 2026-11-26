@@ -29,6 +29,22 @@
 >  - onInboundPublish 方法在消息 publish 时触发
 >    * 异步调用 tdengine.saveData 方法写入 TDengine 数据库
 
+## IoTDB 后端
+
+扩展同时支持 IoTDB Tree 模型。未改动分发包中的 `storage.xml` 配置时，会继续使用现有存储后端。选择 IoTDB 时，将其中的 `iotdbEnabled` 改为 `true`：
+
+```xml
+<storage>
+    <iotdbEnabled>true</iotdbEnabled>
+</storage>
+```
+
+`iotdb.xml` 配置 IoTDB REST API 地址、认证信息、数据库路径、设备路径、测点名、批次大小、有界队列和 HTTP 超时。需将自己的认证信息填入配置文件，并启用 IoTDB REST 服务。扩展启动时通过 REST v2 创建数据库及两个 TEXT 测点；初始化失败会记录错误并关闭 sink。
+
+每条 MQTT PUBLISH 写入同一个设备的一条记录：`mqtt_topic` 保存 topic，`payload_base64` 保存原始 payload 字节的 Base64 文本。payload 可通过 Base64 解码还原，空 payload 也会保留。写入使用 REST v2 `insertRecords` 批量接口；相同精度的时间戳通过进程内单调递增避免覆盖。`timestampPrecision` 必须与 IoTDB 服务的 `timestamp_precision` 一致，支持 `ms`、`us`、`ns`；默认 `ms`，每设备速率超过每秒 1000 条时应同时将两端调整为 `us` 或 `ns`。
+
+队列有容量上限，满载时最多等待 `queueOfferTimeoutMillis`，超时后该消息会被丢弃并记录警告。批次写入失败会重试两次；扩展停止时会排空队列，超过 HTTP 超时预算仍未完成的记录会记录为丢弃。IoTDB 服务端需使用有效认证信息，并授予配置 Tree 路径的写入权限。
+
 ## 编译步骤
 ```shell script
 mvn clean
@@ -44,8 +60,8 @@ mvn package
 
 ### 插件部署
 > 1. 将打包好的压缩包如: hivemq-tdengine-extension-{version}-distribution.zip 解压到 HiveMQ 目录的 extensions 文件夹下  
-> 2. 修改插件包内的 tdengine.xml 配置文件为实际使用的数据库信息  
-> 3. 不需要手动建库建表,插件启动时会自动创建库和表
+> 2. 默认使用现有存储后端；修改 storage.xml 的 iotdbEnabled 后，可编辑对应的 XML 配置文件
+> 3. 插件启动时会自动初始化所选后端的数据库和表/测点
 
 ### 注意事项
 > 1. 在使用 sdk 进行保存 payload 时如果并发数过会引发 “Invalid result set pointer”,根据issue #1477 [https://github.com/taosdata/TDengine/issues/1477](https://github.com/taosdata/TDengine/issues/1477) 修改后错误依旧，所以使用 ReentrantLock 加锁避免竞争。
